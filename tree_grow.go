@@ -43,7 +43,7 @@ func (m *MerkleTree) computeLeafNodes(input [][]byte) ([][]byte, error) {
 		if leaves[i], err = sproutLeaf(input[i], m.hashFunc, m.DomainSeperation); err != nil {
 			return nil, err
 		}
-		m.leafMap[string(m.Leaves[i])] = i
+		m.leafMap[string(leaves[i])] = i
 	}
 
 	return leaves, nil

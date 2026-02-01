@@ -60,11 +60,11 @@ func New(config *Config, input [][]byte) (*MerkleTree, error) {
 
 	var err error
 	// generate leaves
+	m.leafMap = make(map[string]int)
 	m.Leaves, err = m.computeLeafNodes(input)
 	if err != nil {
 		return nil, err
 	}
-	m.leafMap = make(map[string]int)
 	if err := m.grow(); err != nil {
 		return nil, err
 	}
