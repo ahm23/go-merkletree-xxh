@@ -9,7 +9,7 @@ import (
 )
 
 // Helper to generate n random 32-byte "leaves"
-func generateRandomLeaves(t *testing.T, n int) [][]byte {
+func generateRandomInputs(t *testing.T, n int) [][]byte {
 	t.Helper()
 	leaves := make([][]byte, n)
 	for i := 0; i < n; i++ {
@@ -37,7 +37,7 @@ func TestNew(t *testing.T) {
 		for _, tt := range tests {
 			tt := tt // capture range var
 			t.Run(tt.name, func(t *testing.T) {
-				input := generateRandomLeaves(t, tt.inputLen)
+				input := generateRandomInputs(t, tt.inputLen)
 				tree, err := New(nil, input)
 				assert.ErrorIs(t, err, tt.expectErr)
 				assert.Nil(t, tree)
@@ -46,7 +46,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("creates valid tree with 2 leaves - default config", func(t *testing.T) {
-		input := generateRandomLeaves(t, 2)
+		input := generateRandomInputs(t, 2)
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 		require.NotNil(t, tree)
@@ -75,7 +75,7 @@ func TestNew(t *testing.T) {
 		for _, tt := range tests {
 			tt := tt
 			t.Run("", func(t *testing.T) {
-				input := generateRandomLeaves(t, tt.n)
+				input := generateRandomInputs(t, tt.n)
 				tree, err := New(nil, input)
 				require.NoError(t, err)
 				assert.Equal(t, tt.depth, tree.Depth, "wrong depth for %d leaves", tt.n)
@@ -84,7 +84,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("DomainSeparation affects leaf hashes", func(t *testing.T) {
-		input := generateRandomLeaves(t, 4)
+		input := generateRandomInputs(t, 4)
 
 		// No domain separation
 		treeNoSep, err := New(&Config{DomainSeperation: false}, input)
@@ -106,7 +106,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("XXH128 vs XXH64 produces different roots", func(t *testing.T) {
-		input := generateRandomLeaves(t, 4)
+		input := generateRandomInputs(t, 4)
 
 		tree64, err := New(&Config{XXH128: false}, input)
 		require.NoError(t, err)
@@ -119,7 +119,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("leafMap is correctly populated", func(t *testing.T) {
-		input := generateRandomLeaves(t, 3)
+		input := generateRandomInputs(t, 3)
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 

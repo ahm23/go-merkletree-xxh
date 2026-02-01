@@ -12,7 +12,7 @@ func TestProof(t *testing.T) {
 	t.Parallel()
 
 	t.Run("rejects unknown leaf", func(t *testing.T) {
-		input := generateRandomLeaves(t, 4)
+		input := generateRandomInputs(t, 4)
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
@@ -23,7 +23,7 @@ func TestProof(t *testing.T) {
 	})
 
 	t.Run("generates valid proof for each leaf (even count, no domain sep)", func(t *testing.T) {
-		input := generateRandomLeaves(t, 4)
+		input := generateRandomInputs(t, 4)
 		tree, err := New(&Config{DomainSeperation: false}, input)
 		require.NoError(t, err)
 
@@ -42,7 +42,7 @@ func TestProof(t *testing.T) {
 	})
 
 	t.Run("proof verification succeeds with domain separation enabled", func(t *testing.T) {
-		input := generateRandomLeaves(t, 5) // odd count to test duplication
+		input := generateRandomInputs(t, 5) // odd count to test duplication
 		tree, err := New(&Config{DomainSeperation: true}, input)
 		require.NoError(t, err)
 
@@ -57,7 +57,7 @@ func TestProof(t *testing.T) {
 	})
 
 	t.Run("proof fails verification when leaf is wrong", func(t *testing.T) {
-		input := generateRandomLeaves(t, 4)
+		input := generateRandomInputs(t, 4)
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
@@ -65,14 +65,14 @@ func TestProof(t *testing.T) {
 		require.NoError(t, err)
 
 		// Wrong data
-		wrongData := generateRandomLeaves(t, 1)[0]
+		wrongData := generateRandomInputs(t, 1)[0]
 		ok, err := tree.Verify(wrongData, tree.Root, proof, nil)
 		require.NoError(t, err)
 		assert.False(t, ok, "should fail for wrong leaf data")
 	})
 
 	t.Run("proof fails when sibling tampered", func(t *testing.T) {
-		input := generateRandomLeaves(t, 4)
+		input := generateRandomInputs(t, 4)
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
@@ -93,7 +93,7 @@ func TestProof(t *testing.T) {
 	})
 
 	t.Run("proof fails with wrong root", func(t *testing.T) {
-		input := generateRandomLeaves(t, 4)
+		input := generateRandomInputs(t, 4)
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
@@ -109,7 +109,7 @@ func TestProof(t *testing.T) {
 	t.Run("proof path and siblings correct length", func(t *testing.T) {
 		tests := []int{2, 3, 4, 8, 9}
 		for _, n := range tests {
-			input := generateRandomLeaves(t, n)
+			input := generateRandomInputs(t, n)
 			tree, err := New(nil, input)
 			require.NoError(t, err)
 
