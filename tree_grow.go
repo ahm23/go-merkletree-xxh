@@ -14,7 +14,7 @@ func (m *MerkleTree) grow() (err error) {
 		for j := 0; j < nodeCount; j += 2 {
 			raw := concatBytes(m.nodes[i][j], m.nodes[i][j+1])
 			if m.DomainSeperation {
-				concatBytes([]byte{nodePrefix}, raw)
+				raw = concatBytes([]byte{nodePrefix}, raw)
 			}
 
 			if m.nodes[i+1][j>>1], err = m.hashFunc(raw); err != nil {
@@ -23,9 +23,13 @@ func (m *MerkleTree) grow() (err error) {
 		}
 	}
 
-	if m.Root, err = m.hashFunc(concatBytes(
-		m.nodes[m.Depth-1][0], m.nodes[m.Depth-1][1],
-	)); err != nil {
+	// Final root computation — apply domain separation here too for consistency
+	rootInput := concatBytes(m.nodes[m.Depth-1][0], m.nodes[m.Depth-1][1])
+	if m.DomainSeperation {
+		rootInput = concatBytes([]byte{nodePrefix}, rootInput)
+	}
+
+	if m.Root, err = m.hashFunc(rootInput); err != nil {
 		return err
 	}
 
