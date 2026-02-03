@@ -3,7 +3,7 @@ package merkletree
 import "bytes"
 
 // Checks if the leaf data is valid for a given Merkle tree proof root hash.
-func (m *MerkleTree) Verify(input []byte, root []byte, proof *Proof, config *Config) (bool, error) {
+func Verify(input []byte, root []byte, proof *Proof, config *Config) (bool, error) {
 	if input == nil {
 		return false, ErrInputIsNil
 	}
