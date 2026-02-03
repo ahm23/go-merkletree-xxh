@@ -81,7 +81,7 @@ func TestProof(t *testing.T) {
 
 		// Tamper with first sibling
 		tamperedProof := &Proof{
-			Path:     proof.Path,
+			Index:    proof.Index,
 			Siblings: make([][]byte, len(proof.Siblings)),
 		}
 		copy(tamperedProof.Siblings, proof.Siblings)
@@ -118,8 +118,8 @@ func TestProof(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Len(t, proof.Siblings, tree.Depth, "siblings length mismatch for %d leaves", n)
-			// Path should have at most Depth bits set
-			assert.True(t, proof.Path < (1<<tree.Depth), "path too large")
+			// Index should have at most Depth bits set
+			assert.True(t, proof.Index < (1<<tree.Depth), "path too large")
 		}
 	})
 }

@@ -31,7 +31,7 @@ func (m *MerkleTree) Verify(input []byte, root []byte, proof *Proof, config *Con
 	result := make([]byte, len(leaf))
 	copy(result, leaf)
 
-	path := proof.Path
+	path := proof.Index
 	for _, sib := range proof.Siblings {
 		var combined []byte
 

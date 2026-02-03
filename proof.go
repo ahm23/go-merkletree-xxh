@@ -4,7 +4,7 @@ import "errors"
 
 type Proof struct {
 	Siblings [][]byte
-	Path     uint32
+	Index    uint64
 }
 
 // Generates the Merkle proof for a leaf input using the previously generated Merkle tree structure.
@@ -20,7 +20,7 @@ func (m *MerkleTree) Proof(input []byte) (*Proof, error) {
 	}
 
 	var (
-		path     uint32
+		path     uint64
 		siblings = make([][]byte, m.Depth)
 	)
 
@@ -55,7 +55,7 @@ func (m *MerkleTree) Proof(input []byte) (*Proof, error) {
 	}
 
 	return &Proof{
-		Path:     path,
+		Index:    path,
 		Siblings: siblings,
 	}, nil
 }
