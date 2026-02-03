@@ -24,7 +24,7 @@ func xxh3Hash64(input []byte) ([]byte, error) {
 func xxh3Hash128(input []byte) ([]byte, error) {
 	h128 := xxh3.Hash128(input)
 	buf := make([]byte, 16)
-	binary.LittleEndian.PutUint64(buf[0:8], h128.Hi)
-	binary.LittleEndian.PutUint64(buf[8:16], h128.Lo)
+	binary.BigEndian.PutUint64(buf[0:8], h128.Hi)
+	binary.BigEndian.PutUint64(buf[8:16], h128.Lo)
 	return buf, nil
 }
