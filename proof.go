@@ -8,23 +8,29 @@ type Proof struct {
 }
 
 // Generates the Merkle proof for a leaf input using the previously generated Merkle tree structure.
-func (m *MerkleTree) Proof(input []byte) (*Proof, error) {
+func (m *MerkleTree) ProofFromInput(input []byte) (*Proof, error) {
 	leaf, err := sproutLeaf(input, m.hashFunc, m.DomainSeperation)
 	if err != nil {
 		return nil, err
 	}
+	return m.ProofFromLeaf(leaf)
+}
 
+func (m *MerkleTree) ProofFromLeaf(leaf []byte) (*Proof, error) {
 	idx, ok := m.leafMap[string(leaf)]
 	if !ok {
 		return nil, ErrProofInvalidLeaf
 	}
+	return m.Proof(idx)
+}
 
+func (m *MerkleTree) Proof(index int) (*Proof, error) {
 	var (
 		path     uint64
 		siblings = make([][]byte, m.Depth)
 	)
 
-	currentIdx := idx
+	currentIdx := index
 	for level := 0; level < m.Depth; level++ {
 		levelNodes := m.nodes[level]
 		levelLen := len(levelNodes)

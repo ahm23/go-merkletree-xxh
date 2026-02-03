@@ -17,7 +17,7 @@ func TestVerify(t *testing.T) {
 		require.NoError(t, err)
 
 		for i, data := range input {
-			proof, err := tree.Proof(data)
+			proof, err := tree.ProofFromInput(data)
 			require.NoError(t, err)
 
 			ok, err := tree.Verify(data, tree.Root, proof, &Config{DomainSeperation: false})
@@ -33,7 +33,7 @@ func TestVerify(t *testing.T) {
 
 		// Especially test the last (duplicated) leaf
 		for i, data := range input {
-			proof, err := tree.Proof(data)
+			proof, err := tree.ProofFromInput(data)
 			require.NoError(t, err)
 
 			ok, err := tree.Verify(data, tree.Root, proof, tree.Config) // use tree's own config
@@ -47,7 +47,7 @@ func TestVerify(t *testing.T) {
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
-		proof, err := tree.Proof(input[1]) // proof for second leaf
+		proof, err := tree.ProofFromInput(input[1]) // proof for second leaf
 		require.NoError(t, err)
 
 		wrongData := generateRandomInputs(t, 1)[0]
@@ -61,7 +61,7 @@ func TestVerify(t *testing.T) {
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
-		proof, err := tree.Proof(input[0])
+		proof, err := tree.ProofFromInput(input[0])
 		require.NoError(t, err)
 
 		tampered := &Proof{
@@ -81,7 +81,7 @@ func TestVerify(t *testing.T) {
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
-		proof, err := tree.Proof(input[0])
+		proof, err := tree.ProofFromInput(input[0])
 		require.NoError(t, err)
 
 		wrongRoot := bytes.Repeat([]byte{0xAA}, len(tree.Root))
@@ -95,7 +95,7 @@ func TestVerify(t *testing.T) {
 		tree, err := New(&Config{DomainSeperation: true}, input)
 		require.NoError(t, err)
 
-		proof, err := tree.Proof(input[0])
+		proof, err := tree.ProofFromInput(input[0])
 		require.NoError(t, err)
 
 		// Verify with wrong flag
@@ -126,7 +126,7 @@ func TestVerify(t *testing.T) {
 		require.NoError(t, err)
 
 		for i, data := range input {
-			proof, err := tree.Proof(data)
+			proof, err := tree.ProofFromInput(data)
 			require.NoError(t, err)
 
 			ok, err := tree.Verify(data, tree.Root, proof, tree.Config)

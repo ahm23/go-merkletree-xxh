@@ -17,7 +17,7 @@ func TestProof(t *testing.T) {
 		require.NoError(t, err)
 
 		unknown := []byte("not-in-tree")
-		proof, err := tree.Proof(unknown)
+		proof, err := tree.ProofFromInput(unknown)
 		assert.ErrorIs(t, err, ErrProofInvalidLeaf)
 		assert.Nil(t, proof)
 	})
@@ -28,7 +28,7 @@ func TestProof(t *testing.T) {
 		require.NoError(t, err)
 
 		for i, data := range input {
-			proof, err := tree.Proof(data)
+			proof, err := tree.ProofFromInput(data)
 			require.NoError(t, err, "proof for leaf %d", i)
 			require.NotNil(t, proof)
 			assert.Len(t, proof.Siblings, tree.Depth)
@@ -47,7 +47,7 @@ func TestProof(t *testing.T) {
 		require.NoError(t, err)
 
 		for i, data := range input {
-			proof, err := tree.Proof(data)
+			proof, err := tree.ProofFromInput(data)
 			require.NoError(t, err)
 
 			ok, err := tree.Verify(data, tree.Root, proof, &Config{DomainSeperation: true})
@@ -61,7 +61,7 @@ func TestProof(t *testing.T) {
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
-		proof, err := tree.Proof(input[0])
+		proof, err := tree.ProofFromInput(input[0])
 		require.NoError(t, err)
 
 		// Wrong data
@@ -76,7 +76,7 @@ func TestProof(t *testing.T) {
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
-		proof, err := tree.Proof(input[0])
+		proof, err := tree.ProofFromInput(input[0])
 		require.NoError(t, err)
 
 		// Tamper with first sibling
@@ -97,7 +97,7 @@ func TestProof(t *testing.T) {
 		tree, err := New(nil, input)
 		require.NoError(t, err)
 
-		proof, err := tree.Proof(input[0])
+		proof, err := tree.ProofFromInput(input[0])
 		require.NoError(t, err)
 
 		wrongRoot := bytes.Repeat([]byte{0xFF}, len(tree.Root))
@@ -114,7 +114,7 @@ func TestProof(t *testing.T) {
 			require.NoError(t, err)
 
 			// Pick a random leaf index
-			proof, err := tree.Proof(input[0])
+			proof, err := tree.ProofFromInput(input[0])
 			require.NoError(t, err)
 
 			assert.Len(t, proof.Siblings, tree.Depth, "siblings length mismatch for %d leaves", n)
