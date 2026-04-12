@@ -3,7 +3,6 @@ package merkletree
 import (
 	"bytes"
 	"errors"
-	"math/bits"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,8 +13,7 @@ var (
 	ErrHashFuncFailed = errors.New("mock hash func failed")
 )
 
-// Helper: build a reference tree using the same logic but with known-good concat & prefix application
-// (useful for comparing roots when domain sep is on/off)
+// build a reference tree using the same logic but with known-good concat & prefix application
 func buildReferenceTree(t *testing.T, inputs [][]byte, domainSep bool, use128 bool) []byte {
 	t.Helper()
 
@@ -38,15 +36,18 @@ func buildReferenceTree(t *testing.T, inputs [][]byte, domainSep bool, use128 bo
 		require.NoError(t, err)
 	}
 
-	// Build layers with duplication
 	current := leaves
 	for len(current) > 1 {
-		if len(current)%2 == 1 {
-			current = append(current, current[len(current)-1])
-		}
+		nextLevelSize := (len(current) + 1) >> 1 // Ceiling division
+		next := make([][]byte, nextLevelSize)
 
-		next := make([][]byte, len(current)/2)
 		for j := 0; j < len(current); j += 2 {
+			if j+1 >= len(current) {
+				// Carry up the odd node unchanged
+				next[j>>1] = current[j]
+				continue
+			}
+
 			raw := concatBytes(current[j], current[j+1])
 			input := raw
 			if domainSep {
@@ -54,7 +55,7 @@ func buildReferenceTree(t *testing.T, inputs [][]byte, domainSep bool, use128 bo
 			}
 			h, err := hashFunc(input)
 			require.NoError(t, err)
-			next[j/2] = h
+			next[j>>1] = h
 		}
 		current = next
 	}
@@ -122,7 +123,7 @@ func TestGrow_HashErrorPropagation(t *testing.T) {
 		},
 		hashFunc:  mockHash,
 		LeafCount: len(input),
-		Depth:     bits.Len(uint(len(input) - 1)),
+		Depth:     calculateDepthUnbalanced(len(input)), // Use new depth calculation
 		leafMap:   make(map[string]int),
 	}
 
@@ -158,17 +159,70 @@ func TestGrow_RootWithDomainSep(t *testing.T) {
 		"roots should differ when domain separation is toggled")
 }
 
-func TestGrow_OddCountDuplication(t *testing.T) {
+func TestGrow_OddCountNoDuplication(t *testing.T) {
 	input := generateRandomInputs(t, 3) // odd
 
 	tree, err := New(nil, input)
 	require.NoError(t, err)
 
-	// After grow, level 0 should have 4 elements, last two equal
-	assert.Len(t, tree.nodes[0], 4)
-	assert.True(t, bytes.Equal(tree.nodes[0][2], tree.nodes[0][3]),
-		"last leaf should be duplicated for odd count")
+	// After grow, level 0 should STILL have 3 elements (no duplication)
+	assert.Len(t, tree.nodes[0], 3, "leaves should not be duplicated for odd count")
+
+	// All leaves should be the original hashes (no artificial duplication)
+	for i := 0; i < 3; i++ {
+		assert.NotNil(t, tree.nodes[0][i])
+	}
+
+	// Level 1 should have 2 elements: hash(leaf0+leaf1) and leaf2 (carried up)
+	assert.Len(t, tree.nodes[1], 2, "odd leaf should be carried up, creating 2 nodes at level 1")
 
 	// Root should be computable without panic
 	assert.NotEmpty(t, tree.Root)
+}
+
+func TestGrow_DepthCalculation(t *testing.T) {
+	tests := []struct {
+		leafCount     int
+		expectedDepth int
+	}{
+		{1, 1},
+		{2, 2},
+		{3, 3}, // With carry-up: 3 -> 2 -> 1 (3 levels)
+		{4, 3}, // 4 -> 2 -> 1 (3 levels)
+		{5, 4}, // 5 -> 3 -> 2 -> 1 (4 levels)
+		{8, 4}, // 8 -> 4 -> 2 -> 1 (4 levels)
+	}
+
+	for _, tt := range tests {
+		t.Run("leaves_"+string(rune(tt.leafCount)), func(t *testing.T) {
+			input := generateRandomInputs(t, tt.leafCount)
+			tree, err := New(nil, input)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expectedDepth, tree.Depth,
+				"incorrect depth for %d leaves", tt.leafCount)
+		})
+	}
+}
+
+func TestNew_ZeroLeaves(t *testing.T) {
+	input := [][]byte{}
+
+	tree, err := New(nil, input)
+	assert.ErrorIs(t, err, ErrInvalidNumOfLeaves)
+	assert.Nil(t, tree)
+}
+
+// Helper function for new depth calculation (add to your code if not already present)
+func calculateDepthUnbalanced(leafCount int) int {
+	if leafCount == 0 {
+		return 0
+	}
+	depth := 1
+	nodesAtLevel := leafCount
+	for nodesAtLevel > 1 {
+		nodesAtLevel = (nodesAtLevel + 1) >> 1
+		depth++
+	}
+	return depth
 }

@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 			expectErr error
 		}{
 			{"zero leaves", 0, ErrInvalidNumOfLeaves},
-			{"single leaf", 1, ErrInvalidNumOfLeaves},
+			// REMOVED: single leaf is now valid!
 		}
 
 		for _, tt := range tests {
@@ -45,6 +45,23 @@ func TestNew(t *testing.T) {
 		}
 	})
 
+	t.Run("creates valid tree with 1 leaf - default config", func(t *testing.T) {
+		input := generateRandomInputs(t, 1)
+		tree, err := New(nil, input)
+		require.NoError(t, err)
+		require.NotNil(t, tree)
+
+		assert.Equal(t, 1, tree.LeafCount)
+		assert.Equal(t, 1, tree.Depth) // Single leaf → depth 1
+		assert.Len(t, tree.Leaves, 1)
+		assert.Len(t, tree.nodes, 1) // Just the leaf level (which is also root)
+		assert.NotEmpty(t, tree.Root)
+		assert.Len(t, tree.leafMap, 1)
+
+		// Root should equal the leaf hash
+		assert.Equal(t, tree.Leaves[0], tree.Root)
+	})
+
 	t.Run("creates valid tree with 2 leaves - default config", func(t *testing.T) {
 		input := generateRandomInputs(t, 2)
 		tree, err := New(nil, input)
@@ -52,9 +69,9 @@ func TestNew(t *testing.T) {
 		require.NotNil(t, tree)
 
 		assert.Equal(t, 2, tree.LeafCount)
-		assert.Equal(t, 1, tree.Depth) // 2 leaves → depth 1 (root = hash(left||right))
+		assert.Equal(t, 2, tree.Depth) // 2 leaves → depth 2 (leaf level + root level)
 		assert.Len(t, tree.Leaves, 2)
-		assert.Len(t, tree.nodes, 1) // only level 0 (leaves) if Depth=1, adjust if grow adds root level differently
+		assert.Len(t, tree.nodes, 2) // Level 0: leaves, Level 1: root
 		assert.NotEmpty(t, tree.Root)
 		assert.Len(t, tree.leafMap, 2)
 	})
@@ -64,12 +81,13 @@ func TestNew(t *testing.T) {
 			n     int
 			depth int
 		}{
-			{2, 1},
-			{3, 2}, // bits.Len(3-1)=2 → depth 2
-			{4, 2},
-			{5, 3},
-			{8, 3},
-			{9, 4},
+			{1, 1}, // Single leaf
+			{2, 2}, // 2 leaves → 2 levels
+			{3, 3}, // 3 leaves → 3→2→1 (3 levels)
+			{4, 3}, // 4 leaves → 4→2→1 (3 levels)
+			{5, 4}, // 5 leaves → 5→3→2→1 (4 levels)
+			{8, 4}, // 8 leaves → 8→4→2→1 (4 levels)
+			{9, 5}, // 9 leaves → 9→5→3→2→1 (5 levels)
 		}
 
 		for _, tt := range tests {
@@ -128,5 +146,26 @@ func TestNew(t *testing.T) {
 			assert.True(t, ok, "leaf %d not found in leafMap", i)
 			assert.Equal(t, i, idx, "wrong index in leafMap for leaf %d", i)
 		}
+	})
+
+	t.Run("odd leaf count produces valid tree", func(t *testing.T) {
+		input := generateRandomInputs(t, 3)
+		tree, err := New(nil, input)
+		require.NoError(t, err)
+		require.NotNil(t, tree)
+
+		// Verify tree structure
+		assert.Equal(t, 3, tree.LeafCount)
+		assert.Equal(t, 3, tree.Depth)
+		assert.Len(t, tree.nodes, 3)
+
+		// Level 0: 3 leaves
+		assert.Len(t, tree.nodes[0], 3)
+		// Level 1: Hash(L0+L1) and L2 carried up
+		assert.Len(t, tree.nodes[1], 2)
+		// Level 2: Root (Hash of the two level 1 nodes)
+		assert.Len(t, tree.nodes[2], 1)
+
+		assert.NotEmpty(t, tree.Root)
 	})
 }

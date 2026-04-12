@@ -1,7 +1,5 @@
 package merkletree
 
-import "errors"
-
 type Proof struct {
 	Siblings [][]byte
 	Index    uint64
@@ -25,38 +23,43 @@ func (m *MerkleTree) ProofFromLeaf(leaf []byte) (*Proof, error) {
 }
 
 func (m *MerkleTree) Proof(index int) (*Proof, error) {
+	if m.LeafCount == 1 {
+		return &Proof{
+			Index:    0,
+			Siblings: [][]byte{},
+		}, nil
+	}
+
 	var (
 		path     uint64
-		siblings = make([][]byte, m.Depth)
+		siblings = make([][]byte, 0)
 	)
 
 	currentIdx := index
-	for level := 0; level < m.Depth; level++ {
-		levelNodes := m.nodes[level]
-		levelLen := len(levelNodes)
 
+	// traverse up to the level just below the root
+	for level := 0; level < m.Depth-1; level++ {
+		levelNodes := m.nodes[level]
+
+		// determine sibling index
 		var siblingIdx int
 		isRightChild := currentIdx&1 == 1
 
 		if isRightChild {
-			path |= (1 << level) // bit 1 = right child (sibling left)
 			siblingIdx = currentIdx - 1
 		} else {
-			// left child (bit 0 = sibling right)
 			siblingIdx = currentIdx + 1
 		}
 
-		// Handle duplication edge case: if siblingIdx points to a duplicate (same as current)
-		// In duplicate style, this happens when currentIdx is the original last odd index,
-		// but since nodes[level] already has duplicate appended, sibling is valid and equal to leaf
-		if siblingIdx >= levelLen {
-			// This should NOT happen with duplication — but safety check
-			return nil, errors.New("sibling index out of bounds - duplication bug?")
+		// Only add sibling if it exists (handles carried-up nodes)
+		if siblingIdx >= 0 && siblingIdx < len(levelNodes) {
+			siblings = append(siblings, levelNodes[siblingIdx])
+
+			// Set path bit for this level if we're a right child
+			if isRightChild {
+				path |= (1 << uint(len(siblings)-1))
+			}
 		}
-
-		siblings[level] = levelNodes[siblingIdx]
-
-		// For next level: parent index
 		currentIdx >>= 1
 	}
 

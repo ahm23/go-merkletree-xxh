@@ -1,9 +1,5 @@
 package merkletree
 
-import (
-	"math/bits"
-)
-
 const (
 	leafPrefix byte = 0x00 // leaf
 	nodePrefix byte = 0x01 // not leaf
@@ -39,7 +35,7 @@ type MerkleTree struct {
 
 // New generates a new Merkle Tree with the specified configuration and leaf inputs.
 func New(config *Config, input [][]byte) (*MerkleTree, error) {
-	if len(input) <= 1 {
+	if len(input) == 0 {
 		return nil, ErrInvalidNumOfLeaves
 	}
 	if config == nil {
@@ -49,7 +45,7 @@ func New(config *Config, input [][]byte) (*MerkleTree, error) {
 	m := &MerkleTree{
 		Config:    config,
 		LeafCount: len(input),
-		Depth:     bits.Len(uint(len(input) - 1)),
+		leafMap:   make(map[string]int),
 	}
 
 	if config.XXH128 {
@@ -58,13 +54,14 @@ func New(config *Config, input [][]byte) (*MerkleTree, error) {
 		m.hashFunc = xxh3Hash64
 	}
 
+	// compute leaf nodes (hash, domain sep., etc...)
 	var err error
-	// generate leaves
-	m.leafMap = make(map[string]int)
 	m.Leaves, err = m.computeLeafNodes(input)
 	if err != nil {
 		return nil, err
 	}
+
+	// grow tree
 	if err := m.grow(); err != nil {
 		return nil, err
 	}

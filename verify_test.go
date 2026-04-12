@@ -20,7 +20,7 @@ func TestVerify(t *testing.T) {
 			proof, err := tree.ProofFromInput(data)
 			require.NoError(t, err)
 
-			ok, err := tree.Verify(data, tree.Root, proof, &Config{DomainSeperation: false})
+			ok, err := Verify(data, tree.Root, proof, &Config{DomainSeperation: false})
 			require.NoError(t, err)
 			assert.True(t, ok, "verification failed for leaf %d", i)
 		}
@@ -36,7 +36,7 @@ func TestVerify(t *testing.T) {
 			proof, err := tree.ProofFromInput(data)
 			require.NoError(t, err)
 
-			ok, err := tree.Verify(data, tree.Root, proof, tree.Config) // use tree's own config
+			ok, err := Verify(data, tree.Root, proof, tree.Config) // use tree's own config
 			require.NoError(t, err)
 			assert.True(t, ok, "verification failed for leaf %d (odd count)", i)
 		}
@@ -51,7 +51,7 @@ func TestVerify(t *testing.T) {
 		require.NoError(t, err)
 
 		wrongData := generateRandomInputs(t, 1)[0]
-		ok, err := tree.Verify(wrongData, tree.Root, proof, nil)
+		ok, err := Verify(wrongData, tree.Root, proof, nil)
 		require.NoError(t, err)
 		assert.False(t, ok, "should fail with incorrect leaf data")
 	})
@@ -71,7 +71,7 @@ func TestVerify(t *testing.T) {
 		copy(tampered.Siblings, proof.Siblings)
 		tampered.Siblings[0] = bytes.Repeat([]byte{0xFF}, len(proof.Siblings[0])) // tamper
 
-		ok, err := tree.Verify(input[0], tree.Root, tampered, nil)
+		ok, err := Verify(input[0], tree.Root, tampered, nil)
 		require.NoError(t, err)
 		assert.False(t, ok, "should fail with tampered sibling")
 	})
@@ -85,7 +85,7 @@ func TestVerify(t *testing.T) {
 		require.NoError(t, err)
 
 		wrongRoot := bytes.Repeat([]byte{0xAA}, len(tree.Root))
-		ok, err := tree.Verify(input[0], wrongRoot, proof, nil)
+		ok, err := Verify(input[0], wrongRoot, proof, nil)
 		require.NoError(t, err)
 		assert.False(t, ok, "should fail with incorrect root")
 	})
@@ -99,23 +99,21 @@ func TestVerify(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify with wrong flag
-		ok, err := tree.Verify(input[0], tree.Root, proof, &Config{DomainSeperation: false})
+		ok, err := Verify(input[0], tree.Root, proof, &Config{DomainSeperation: false})
 		require.NoError(t, err)
 		assert.False(t, ok, "should fail when domain separation flag doesn't match tree")
 	})
 
 	t.Run("input validation - nil cases", func(t *testing.T) {
-		tree := &MerkleTree{} // dummy
-
 		proof := &Proof{} // dummy
 
 		// Nil input
-		ok, err := tree.Verify(nil, []byte("root"), proof, nil)
+		ok, err := Verify(nil, []byte("root"), proof, nil)
 		assert.False(t, ok)
 		assert.ErrorIs(t, err, ErrInputIsNil)
 
 		// Nil proof
-		ok, err = tree.Verify([]byte("data"), []byte("root"), nil, nil)
+		ok, err = Verify([]byte("data"), []byte("root"), nil, nil)
 		assert.False(t, ok)
 		assert.ErrorIs(t, err, ErrProofIsNil)
 	})
@@ -129,7 +127,7 @@ func TestVerify(t *testing.T) {
 			proof, err := tree.ProofFromInput(data)
 			require.NoError(t, err)
 
-			ok, err := tree.Verify(data, tree.Root, proof, tree.Config)
+			ok, err := Verify(data, tree.Root, proof, tree.Config)
 			require.NoError(t, err)
 			assert.True(t, ok, "minimal tree verification failed for leaf %d", i)
 		}

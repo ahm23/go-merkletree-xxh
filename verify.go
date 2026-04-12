@@ -28,26 +28,30 @@ func Verify(input []byte, root []byte, proof *Proof, config *Config) (bool, erro
 		return false, err
 	}
 
-	result := make([]byte, len(leaf))
-	copy(result, leaf)
+	if len(proof.Siblings) == 0 {
+		return bytes.Equal(leaf, root), nil
+	}
 
+	result := leaf
 	path := proof.Index
-	for _, sib := range proof.Siblings {
+
+	for _, sibling := range proof.Siblings {
 		var combined []byte
 
+		// least significant bit of the remaining path
 		if path&1 == 1 {
-			// Right child: left = sibling, right = result
+			// right child, sibling on left
 			if config.DomainSeperation {
-				combined = concatBytes([]byte{nodePrefix}, concatBytes(sib, result))
+				combined = concatBytes([]byte{nodePrefix}, concatBytes(sibling, result))
 			} else {
-				combined = concatBytes(sib, result)
+				combined = concatBytes(sibling, result)
 			}
 		} else {
-			// Left child: left = result, right = sibling
+			// left child, sibling on right
 			if config.DomainSeperation {
-				combined = concatBytes([]byte{nodePrefix}, concatBytes(result, sib))
+				combined = concatBytes([]byte{nodePrefix}, concatBytes(result, sibling))
 			} else {
-				combined = concatBytes(result, sib)
+				combined = concatBytes(result, sibling)
 			}
 		}
 
