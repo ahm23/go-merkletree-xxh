@@ -33,7 +33,7 @@ func Verify(input []byte, root []byte, proof *Proof, config *Config) (bool, erro
 	}
 
 	result := leaf
-	path := proof.Index
+	path := proof.PathBits
 
 	for _, sibling := range proof.Siblings {
 		var combined []byte

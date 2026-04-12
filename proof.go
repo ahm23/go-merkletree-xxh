@@ -2,7 +2,7 @@ package merkletree
 
 type Proof struct {
 	Siblings [][]byte
-	Index    uint64
+	PathBits uint64
 }
 
 // Generates the Merkle proof for a leaf input using the previously generated Merkle tree structure.
@@ -25,7 +25,7 @@ func (m *MerkleTree) ProofFromLeaf(leaf []byte) (*Proof, error) {
 func (m *MerkleTree) Proof(index int) (*Proof, error) {
 	if m.LeafCount == 1 {
 		return &Proof{
-			Index:    0,
+			PathBits: 0,
 			Siblings: [][]byte{},
 		}, nil
 	}
@@ -64,7 +64,7 @@ func (m *MerkleTree) Proof(index int) (*Proof, error) {
 	}
 
 	return &Proof{
-		Index:    path,
+		PathBits: path,
 		Siblings: siblings,
 	}, nil
 }

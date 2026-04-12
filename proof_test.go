@@ -86,7 +86,7 @@ func TestProof(t *testing.T) {
 
 		// Tamper with first sibling
 		tamperedProof := &Proof{
-			Index:    proof.Index,
+			PathBits: proof.PathBits,
 			Siblings: make([][]byte, len(proof.Siblings)),
 		}
 		copy(tamperedProof.Siblings, proof.Siblings)
@@ -137,7 +137,7 @@ func TestProof(t *testing.T) {
 			assert.LessOrEqual(t, len(proof.Siblings), tt.maxSiblings, "too many siblings for %d leaves", tt.leafCount)
 
 			// Index should be within valid range
-			assert.True(t, proof.Index < (1<<tree.Depth), "path too large")
+			assert.True(t, proof.PathBits < (1<<tree.Depth), "path too large")
 
 			// Verify the proof works
 			ok, err := Verify(input[0], tree.Root, proof, nil)
@@ -156,7 +156,7 @@ func TestProof(t *testing.T) {
 
 		// Single leaf should have empty siblings
 		assert.Empty(t, proof.Siblings, "single leaf should have no siblings")
-		assert.Equal(t, uint64(0), proof.Index)
+		assert.Equal(t, uint64(0), proof.PathBits)
 
 		// Verification should work
 		ok, err := Verify(input[0], tree.Root, proof, nil)
@@ -194,5 +194,90 @@ func TestProof(t *testing.T) {
 		ok2, err := Verify(input[2], tree.Root, proof2, nil)
 		require.NoError(t, err)
 		assert.True(t, ok2)
+	})
+}
+
+func TestProof_6Leaves_4thChunk(t *testing.T) {
+	// Simulate a 5,506 byte file = 6 chunks (5 full + 1 partial)
+	chunks := [][]byte{
+		bytes.Repeat([]byte{0x00}, 1024), // Chunk 0
+		bytes.Repeat([]byte{0x01}, 1024), // Chunk 1
+		bytes.Repeat([]byte{0x02}, 1024), // Chunk 2
+		bytes.Repeat([]byte{0x03}, 1024), // Chunk 3
+		bytes.Repeat([]byte{0x04}, 1024), // Chunk 4 (the one we're testing)
+		bytes.Repeat([]byte{0x05}, 386),  // Chunk 5 (partial)
+	}
+
+	config := &Config{
+		DomainSeperation: true,
+		XXH128:           true,
+	}
+
+	// Build the tree
+	tree, err := New(config, chunks)
+	require.NoError(t, err)
+	require.NotNil(t, tree)
+
+	t.Logf("Tree depth: %d", tree.Depth)
+	t.Logf("Leaf count: %d", tree.LeafCount)
+	for i, level := range tree.nodes {
+		t.Logf("Level %d: %d nodes", i, len(level))
+	}
+
+	// Expected structure for 6 leaves:
+	// Level 0: 6 nodes
+	// Level 1: 3 nodes
+	// Level 2: 2 nodes
+	// Level 3: 1 node (root)
+	assert.Equal(t, 4, tree.Depth)
+	assert.Len(t, tree.nodes[0], 6)
+	assert.Len(t, tree.nodes[1], 3)
+	assert.Len(t, tree.nodes[2], 2)
+	assert.Len(t, tree.nodes[3], 1)
+
+	// Generate proof for the 4th chunk (index 4)
+	proof, err := tree.Proof(4)
+	require.NoError(t, err)
+	require.NotNil(t, proof)
+
+	t.Logf("Proof for chunk 4: Index=%d (0b%b), Siblings=%d", proof.PathBits, proof.PathBits, len(proof.Siblings))
+
+	// Expected proof for leaf 4:
+	// - Level 0: sibling is leaf 5
+	// - Level 1: no sibling (H45 carried up)
+	// - Level 2: sibling is H0123 (hash of left subtree)
+	// Total siblings: 2
+	assert.Len(t, proof.Siblings, 2, "Expected 2 siblings for leaf 4")
+
+	// Verify the proof
+	valid, err := Verify(chunks[4], tree.Root, proof, config)
+	require.NoError(t, err)
+	assert.True(t, valid, "Proof verification failed for chunk 4")
+
+	// Also verify all other chunks to ensure overall correctness
+	for i, chunk := range chunks {
+		proof, err := tree.ProofFromInput(chunk)
+		require.NoError(t, err, "Failed to generate proof for chunk %d", i)
+
+		valid, err := Verify(chunk, tree.Root, proof, config)
+		require.NoError(t, err, "Verification error for chunk %d", i)
+		assert.True(t, valid, "Proof verification failed for chunk %d", i)
+
+		t.Logf("Chunk %d verified successfully with %d siblings", i, len(proof.Siblings))
+	}
+
+	// Detailed verification of proof structure
+	t.Run("ProofStructure", func(t *testing.T) {
+		// Leaf 0 (first): should have siblings at level 0 (leaf 1), level 1 (H23), level 2 (H45)
+		proof0, _ := tree.Proof(0)
+		assert.Len(t, proof0.Siblings, 3, "Leaf 0 should have 3 siblings")
+
+		// Leaf 4 (our test case): should have siblings at level 0 (leaf 5) and level 2 (H0123)
+		proof4, _ := tree.Proof(4)
+		assert.Len(t, proof4.Siblings, 2, "Leaf 4 should have 2 siblings")
+
+		// Leaf 5 (last): should have sibling at level 0 (leaf 4) and level 2 (H0123)
+		proof5, _ := tree.Proof(5)
+		assert.Len(t, proof5.Siblings, 2, "Leaf 5 should have 2 siblings")
 	})
 }

@@ -65,7 +65,7 @@ func TestVerify(t *testing.T) {
 		require.NoError(t, err)
 
 		tampered := &Proof{
-			Index:    proof.Index,
+			PathBits: proof.PathBits,
 			Siblings: make([][]byte, len(proof.Siblings)),
 		}
 		copy(tampered.Siblings, proof.Siblings)
